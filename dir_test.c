@@ -10,25 +10,22 @@
 #include <pthread.h>
 
 //Implement merge sort for top n processes
-void merge(int arr[], int l, int m, int r)
-{
+void merge(int arr[], int low, int mid, int high){
 	int i, j, k;
-	int n1 = m - l + 1;
-	int n2 = r - m;
+	int n1 = mid - low + 1;
+	int n2 = high - mid;
 
-	/* create temp arrays */
 	int L[n1], R[n2];
 
-	/* Copy data to temp arrays L[] and R[] */
 	for (i = 0; i < n1; i++)
-		L[i] = arr[l + i];
+		L[i] = arr[low + i];
 	for (j = 0; j < n2; j++)
-		R[j] = arr[m + 1 + j];
+		R[j] = arr[mid + 1 + j];
 
-	/* Merge the temp arrays back into arr[l..r]*/
-	i = 0; // Initial index of first subarray
-	j = 0; // Initial index of second subarray
-	k = l; // Initial index of merged subarray
+	i = 0; 
+	j = 0; 
+	k = low; 
+
 	while (i < n1 && j < n2) {
 		if (L[i] <= R[j]) {
 			arr[k] = L[i];
@@ -40,17 +37,11 @@ void merge(int arr[], int l, int m, int r)
 		}
 		k++;
 	}
-
-	/* Copy the remaining elements of L[], if there
-	are any */
 	while (i < n1) {
 		arr[k] = L[i];
 		i++;
 		k++;
 	}
-
-	/* Copy the remaining elements of R[], if there
-	are any */
 	while (j < n2) {
 		arr[k] = R[j];
 		j++;
@@ -58,23 +49,14 @@ void merge(int arr[], int l, int m, int r)
 	}
 }
 
-/* l is for left index and r is right index of the
-sub-array of arr to be sorted */
-void mergeSort(int arr[], int l, int r)
-{
-	if (l < r) {
-		// Same as (l+r)/2, but avoids overflow for
-		// large l and h
-		int m = l + (r - l) / 2;
-
-		// Sort first and second halves
-		mergeSort(arr, l, m);
-		mergeSort(arr, m + 1, r);
-
-		merge(arr, l, m, r);
+void sort(int arr[], int low, int high) {
+	if (low < high) {
+		int mid = low + (high - low) / 2;
+		sort(arr, low, mid);
+		sort(arr, mid + 1, high);
+		merge(arr, low, mid, high);
 	}
 }
-
 int main(void){
 	struct dirent *de; // Pointer for directory entry
 
@@ -126,9 +108,30 @@ int main(void){
         data[i][2] = broken_c[13];
         data[i][3] = broken_c[14];
     }
+    int top_x = 10; //Number of top cpu processes needed to be found
+    int cpuusage_arr[n];
     for(int i=0;i<n;i++){
         printf("%s %s %s %s\n",data[i][0],data[i][1],data[i][2],data[i][3]);
+        int total_cpuval = atoi(data[i][2])+atoi(data[i][3]);
+        cpuusage_arr[i] = total_cpuval;
     }
-
+    sort(cpuusage_arr,0,n-1);
+    for(int i=0;i<n;i++) printf("%d ",cpuusage_arr[i]);
+    printf("\n");
+    int cutoff_usage = cpuusage_arr[n-top_x];
+    char* top_data[top_x][4];
+    int j = 0;
+    for(int i=0;i<n;i++){
+        if(j<top_x && atoi(data[i][2])+atoi(data[i][3])>=cutoff_usage){
+            top_data[j][0] = data[i][0];
+            top_data[j][1] = data[i][1];
+            top_data[j][2] = data[i][2];
+            top_data[j][3] = data[i][3];
+            j+=1;
+        }
+    }
+    for(int i=0;i<top_x;i++){
+        printf("%s %s %s %s\n",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
+    }
 	return 0;
 }

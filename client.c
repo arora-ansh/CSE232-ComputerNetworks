@@ -13,7 +13,6 @@ int main(int argc, char const *argv[])
     char client_no_str[10];
     scanf("%s",client_no_str);
     strcat(hello,client_no_str);
-    printf("%s",hello);
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0){
         printf("\n Socket creation error \n");
@@ -39,6 +38,12 @@ int main(int argc, char const *argv[])
     printf("Hello message sent\n");
     int flag = 0;
     int valread2;
+    printf("Enter number of top processes you want to see-\n");
+    int x;
+    scanf("%d",&x);
+    char top_x[10];
+    sprintf(top_x,"%d",x);
+    send(sock , top_x , strlen(top_x) , 0 );
     while(!flag){
         valread2 = read( sock , buffer, 1024);
         if(valread2>0){

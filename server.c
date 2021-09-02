@@ -3,19 +3,80 @@
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <netinet/in.h>
-#include <string.h>
-#include <unistd.h>  
+#include <string.h>  
 #include <pthread.h>
+#include <dirent.h>
+#include <fcntl.h>
+
+
 #define PORT 8080
 
+void merge(int arr[], int low, int mid, int high){
+	int i, j, k;
+	int n1 = mid - low + 1;
+	int n2 = high - mid;
+
+	int L[n1], R[n2];
+
+	for (i = 0; i < n1; i++)
+		L[i] = arr[low + i];
+	for (j = 0; j < n2; j++)
+		R[j] = arr[mid + 1 + j];
+
+	i = 0; 
+	j = 0; 
+	k = low; 
+
+	while (i < n1 && j < n2) {
+		if (L[i] <= R[j]) {
+			arr[k] = L[i];
+			i++;
+		}
+		else {
+			arr[k] = R[j];
+			j++;
+		}
+		k++;
+	}
+	while (i < n1) {
+		arr[k] = L[i];
+		i++;
+		k++;
+	}
+	while (j < n2) {
+		arr[k] = R[j];
+		j++;
+		k++;
+	}
+}
+
+void sort(int arr[], int low, int high) {
+	if (low < high) {
+		int mid = low + (high - low) / 2;
+		sort(arr, low, mid);
+		sort(arr, mid + 1, high);
+		merge(arr, low, mid, high);
+	}
+}
+
 struct args {
-    char* client_msg;
+    char client_msg[100];
     int socket_id;
 };
 
 void *threadFunc(void *input){
-    printf("Going to put this thread in sleep for 20 secs\n");
-    sleep(20);
+    // printf("Going to put this thread in sleep for 20 secs\n");
+    // sleep(20);
+    char client_pt_req[10];
+    int flag = 0;
+    while(!flag){
+        int rt = read(((struct args*)input)->socket_id, client_pt_req, 1024);
+        if(rt>0){
+            flag = 1;
+            printf("Client requests top %d processes\n",atoi(client_pt_req));
+        }
+    }
+    int top_x = atoi(client_pt_req);
     printf("Client Message: %s\n",((struct args*)input)->client_msg);
     char* server_msg = "Server is done with you";
     send(((struct args*)input)->socket_id , server_msg , strlen(server_msg) , 0 );
@@ -66,7 +127,7 @@ int main(int argc, char const *argv[])
         valread = read( new_socket , buffer, 1024);
         printf("%s\n",buffer);
         struct args *thread_data = (struct args *)malloc(sizeof(struct args));
-        thread_data->client_msg = buffer;
+        strcpy(thread_data->client_msg, buffer);
         thread_data->socket_id = new_socket;
         pthread_create(&thread_id[thread_count++], NULL, threadFunc, (void *)thread_data);
         // printf("Hello message sent\n");
