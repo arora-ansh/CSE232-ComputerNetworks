@@ -2,3 +2,4 @@ https://man7.org/linux/man-pages/man5/proc.5.html
 http://www.cse.cuhk.edu.hk/~ericlo/teaching/os/lab/9-PThread/Pass.html
 https://www.geeksforgeeks.org/multithreading-c-2/
 https://idiotdeveloper.com/file-transfer-using-tcp-socket-in-c/
+https://www.geeksforgeeks.org/input-output-system-calls-c-create-open-close-read-write/
