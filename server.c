@@ -8,7 +8,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-
 #define PORT 8080
 
 void merge(int arr[], int low, int mid, int high){
@@ -27,7 +26,7 @@ void merge(int arr[], int low, int mid, int high){
 	j = 0; 
 	k = low; 
 
-	while (i < n1 && j < n2) {
+	while (i < n1 && j < n2){
 		if (L[i] <= R[j]) {
 			arr[k] = L[i];
 			i++;
@@ -38,12 +37,12 @@ void merge(int arr[], int low, int mid, int high){
 		}
 		k++;
 	}
-	while (i < n1) {
+	while (i < n1){
 		arr[k] = L[i];
 		i++;
 		k++;
 	}
-	while (j < n2) {
+	while (j < n2){
 		arr[k] = R[j];
 		j++;
 		k++;
@@ -65,8 +64,18 @@ struct args {
 };
 
 void *threadFunc(void *input){
-    // printf("Going to put this thread in sleep for 20 secs\n");
-    // sleep(20);
+    char * token = strtok(((struct args*)input)->client_msg," ");
+    int client_no = 0;
+    int k = 0;
+    while(token != NULL){
+        if(k==3){
+            client_no = atoi(token);
+        }
+        k+=1;
+        token = strtok(NULL," ");
+    }
+    char client_no_str[10];
+    sprintf(client_no_str,"%d",client_no);
     char client_pt_req[10];
     int flag = 0;
     while(!flag){
@@ -94,8 +103,6 @@ void *threadFunc(void *input){
             pid_array[sz++] = atoi(de->d_name);
         }
     }
-    // printf("%d\n",sz);
-    // for(int i=0;i<sz;i++) printf("%d\n",pid_array[i]);
 	closedir(dr);
 
     int n = sz; // n denotes the number of CPU processes to be returned
@@ -125,16 +132,14 @@ void *threadFunc(void *input){
         data[i][2] = broken_c[13];
         data[i][3] = broken_c[14];
     }
-    // int top_x = 10; //Number of top cpu processes needed to be found
+
     int cpuusage_arr[n]; //Holds the cpuusage for all processes
     for(int i=0;i<n;i++){
-        // printf("%s %s %s %s\n",data[i][0],data[i][1],data[i][2],data[i][3]);
         int total_cpuval = atoi(data[i][2])+atoi(data[i][3]);
         cpuusage_arr[i] = total_cpuval;
     }
     sort(cpuusage_arr,0,n-1); //Sorted, to find top (top_x)# of processes
-    // for(int i=0;i<n;i++) printf("%d ",cpuusage_arr[i]);
-    // printf("\n");
+    
     int cutoff_usage = cpuusage_arr[n-top_x]; //nth largest value stored here
     char* top_data[top_x][4]; //Will hold the data that needs to be processed back to the client
     int j = 0;
@@ -147,10 +152,18 @@ void *threadFunc(void *input){
             j+=1;
         }
     }
+
+    //Creating a file, server side
+    FILE *filePointer;
+    char filename[20] = "server_";
+    strcat(filename,client_no_str);
+    filePointer = fopen(filename, "w") ;
+
     for(int i=0;i<top_x;i++){
         char single_data_row_string[100];
         printf("%s %s %s %s\n",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
         sprintf(single_data_row_string,"%s %s %s %s",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
+        fprintf(filePointer,"%s\n",single_data_row_string);
         send(((struct args*)input)->socket_id, single_data_row_string, strlen(single_data_row_string), 0);
         int flag2 = 0;
         char msg_received[10] = {0};
@@ -162,6 +175,8 @@ void *threadFunc(void *input){
         }
     }
 
+    fclose(filePointer);
+
     //Receiving the final result from client and printing it, along with another Hello
     flag = 0;
     char final_client_result[100];
@@ -171,7 +186,7 @@ void *threadFunc(void *input){
             flag = 1;
         }
     }
-    printf("  Client Message: %s \n  %s \n",((struct args*)input)->client_msg, final_client_result);
+    printf("  Client Message: Ma%s\n",final_client_result);
 
     sleep(20);
     char* server_msg = "Server is done with you";
@@ -180,12 +195,7 @@ void *threadFunc(void *input){
     return NULL;
 }
 
-int main(int argc, char const *argv[])
-{
-    
-    char buffer[1024] = {0};
-    char *hello = "Connected to server";
-       
+int main(){
     // Creating socket file descriptor
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == 0){
@@ -193,7 +203,6 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
        
-    // Forcefully attaching socket to the port 8080
     int opt = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))){
         perror("setsockopt");
@@ -205,13 +214,18 @@ int main(int argc, char const *argv[])
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons( PORT );
        
-    // Forcefully attaching socket to the port 8080
+    // Binding socket to the port 8080
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0){
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
     int thread_count = 0;
     pthread_t thread_id[20];
+
+    char buffer[1024] = {0};
+    char *hello = "Connected to server";
+
+    //Loop that accepts new connections and creates threads for each client, thus setting up concurrence
     while(1){
         
         //Listening to socket for potential connection
@@ -227,12 +241,16 @@ int main(int argc, char const *argv[])
         send(new_socket , hello , strlen(hello) , 0 );
         int valread = read( new_socket , buffer, 1024);
         printf("%s\n",buffer);
+
+        //Initiating variables of struct args that is passed to thread
         struct args *thread_data = (struct args *)malloc(sizeof(struct args));
         strcpy(thread_data->client_msg, buffer);
         thread_data->socket_id = new_socket;
+
         pthread_create(&thread_id[thread_count++], NULL, threadFunc, (void *)thread_data);
-        // printf("Hello message sent\n");
     }
+
+    //Threads joined back
     for(int i=0;i<thread_count;i++){
         pthread_join(thread_id[i], NULL);
     }

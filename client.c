@@ -27,14 +27,12 @@ int main(int argc, char const *argv[])
    
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
-       
-    // Convert IPv4 and IPv6 addresses from text to binary form
     if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0){
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
-   
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
+    int con = connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    if (con < 0){
         printf("\nConnection Failed \n");
         return -1;
     }
@@ -57,13 +55,18 @@ int main(int argc, char const *argv[])
     char max_pid[10] = {0};
     char max_proc_name[100] = {0};
     int max_cpu_usage = -1;
+
+    FILE *filePointer;
+    char filename[20] = "client_";
+    strcat(filename,client_no_str);
+    filePointer = fopen(filename, "w") ;
     
     while(flag<x){
         char single_data_row[100] = {0}; //Will hold the data that needs to be processed back to the client
         int valread2 = read(sock, single_data_row, 100);
         if(valread2>0){
             // printf("%s\n",single_data_row);
-
+            fprintf(filePointer,"%s\n",single_data_row);
             //process the received row and store it in top_data
             char * token = strtok(single_data_row," ");
             // printf("%s \n",token);
@@ -94,6 +97,7 @@ int main(int argc, char const *argv[])
             send(sock,msg_received,strlen(msg_received),0);
         }
     }
+    fclose(filePointer);
 
     printf("Max CPU Usage Process found- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
     char final_client_result[200];
