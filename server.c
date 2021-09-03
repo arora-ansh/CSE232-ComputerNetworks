@@ -152,12 +152,31 @@ void *threadFunc(void *input){
         printf("%s %s %s %s\n",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
         sprintf(single_data_row_string,"%s %s %s %s",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
         send(((struct args*)input)->socket_id, single_data_row_string, strlen(single_data_row_string), 0);
+        int flag2 = 0;
+        char msg_received[10] = {0};
+        while(!flag2){
+            int rt = read(((struct args*)input)->socket_id, msg_received, 10);
+            if(rt>0){
+                flag2 = 1;
+            }
+        }
     }
-    
+
+    //Receiving the final result from client and printing it, along with another Hello
+    flag = 0;
+    char final_client_result[100];
+    while(!flag){
+        int rt = read(((struct args*)input)->socket_id, final_client_result, 100);
+        if(rt>0){
+            flag = 1;
+        }
+    }
+    printf("  Client Message: %s \n  %s \n",((struct args*)input)->client_msg, final_client_result);
+
     sleep(20);
-    printf("Client Message: %s\n",((struct args*)input)->client_msg);
     char* server_msg = "Server is done with you";
     send(((struct args*)input)->socket_id, server_msg, strlen(server_msg), 0 );
+
     return NULL;
 }
 

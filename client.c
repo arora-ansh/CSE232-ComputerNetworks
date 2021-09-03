@@ -3,6 +3,12 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <string.h>  
+#include <pthread.h>
+#include <dirent.h>
+#include <fcntl.h>
 #define PORT 8080
    
 int main(int argc, char const *argv[])
@@ -44,15 +50,55 @@ int main(int argc, char const *argv[])
     sprintf(top_x,"%d",x);
     send(sock , top_x , strlen(top_x) , 0 );
     
+    // char* top_data[x][4];//Top data will store the received the top n processes data
+
     int flag = 0;
-    char* single_data_row; //Will hold the data that needs to be processed back to the client
+    char* msg_received = "received";
+    char max_pid[10] = {0};
+    char max_proc_name[100] = {0};
+    int max_cpu_usage = -1;
+    
     while(flag<x){
+        char single_data_row[100] = {0}; //Will hold the data that needs to be processed back to the client
         int valread2 = read(sock, single_data_row, 100);
         if(valread2>0){
+            // printf("%s\n",single_data_row);
+
+            //process the received row and store it in top_data
+            char * token = strtok(single_data_row," ");
+            // printf("%s \n",token);
+            int j = 0;
+            int cur_proc_sum = 0;
+            char cur_proc_name[100] = {0};
+            char cur_proc_pid[10] = {0};
+            while(token != NULL && j<4){
+                if(j==0){
+                    strcpy(cur_proc_pid,token);
+                }
+                else if(j==1){
+                    strcpy(cur_proc_name,token);
+                }
+                else if(j==2 || j==3){
+                    cur_proc_sum += atoi(token);
+                }
+                token = strtok(NULL," ");
+                j+=1;
+            }
+            //If cur_proc_sum greater than max_cpu_usage, reallocate them these new values
+            if(cur_proc_sum>max_cpu_usage){
+                max_cpu_usage = cur_proc_sum;
+                strcpy(max_proc_name,cur_proc_name);
+                strcpy(max_pid,cur_proc_pid);
+            }
             flag += 1;
-            printf("%s\n",single_data_row);
+            send(sock,msg_received,strlen(msg_received),0);
         }
     }
+
+    printf("Max CPU Usage Process found- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
+    char final_client_result[200];
+    sprintf(final_client_result, "Max CPU Usage Process found- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
+    send(sock,final_client_result,strlen(final_client_result),0);
     flag = 0;
     int valread3;
     while(!flag){
