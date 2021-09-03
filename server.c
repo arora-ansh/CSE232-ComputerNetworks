@@ -148,12 +148,16 @@ void *threadFunc(void *input){
         }
     }
     for(int i=0;i<top_x;i++){
+        char single_data_row_string[100];
         printf("%s %s %s %s\n",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
+        sprintf(single_data_row_string,"%s %s %s %s",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
+        send(((struct args*)input)->socket_id, single_data_row_string, strlen(single_data_row_string), 0);
     }
+    
     sleep(20);
     printf("Client Message: %s\n",((struct args*)input)->client_msg);
     char* server_msg = "Server is done with you";
-    send(((struct args*)input)->socket_id , server_msg , strlen(server_msg) , 0 );
+    send(((struct args*)input)->socket_id, server_msg, strlen(server_msg), 0 );
     return NULL;
 }
 

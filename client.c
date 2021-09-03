@@ -36,17 +36,28 @@ int main(int argc, char const *argv[])
     printf("%s\n",buffer );
     send(sock , hello , strlen(hello) , 0 );
     printf("Hello message sent\n");
-    int flag = 0;
-    int valread2;
+    
     printf("Enter number of top processes you want to see-\n");
     int x;
     scanf("%d",&x);
     char top_x[10];
     sprintf(top_x,"%d",x);
     send(sock , top_x , strlen(top_x) , 0 );
-    while(!flag){
-        valread2 = read( sock , buffer, 1024);
+    
+    int flag = 0;
+    char* single_data_row; //Will hold the data that needs to be processed back to the client
+    while(flag<x){
+        int valread2 = read(sock, single_data_row, 100);
         if(valread2>0){
+            flag += 1;
+            printf("%s\n",single_data_row);
+        }
+    }
+    flag = 0;
+    int valread3;
+    while(!flag){
+        valread3 = read( sock , buffer, 1024);
+        if(valread3>0){
             flag = 1;
             printf("%s\n",buffer );
         }
