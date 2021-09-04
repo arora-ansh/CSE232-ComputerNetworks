@@ -159,10 +159,11 @@ void *threadFunc(void *input){
     strcat(filename,client_no_str);
     filePointer = fopen(filename, "w") ;
 
+    printf("Top processes found, server side-\n");
     for(int i=0;i<top_x;i++){
         char single_data_row_string[100];
-        printf("%s %s %s %s\n",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
-        sprintf(single_data_row_string,"%s %s %s %s",top_data[i][0],top_data[i][1],top_data[i][2],top_data[i][3]);
+        printf("%s %s %d\n",top_data[i][0],top_data[i][1],atoi(top_data[i][2])+atoi(top_data[i][3]));
+        sprintf(single_data_row_string,"%s %s %d",top_data[i][0],top_data[i][1],atoi(top_data[i][2])+atoi(top_data[i][3]));
         fprintf(filePointer,"%s\n",single_data_row_string);
         send(((struct args*)input)->socket_id, single_data_row_string, strlen(single_data_row_string), 0);
         int flag2 = 0;
@@ -186,7 +187,7 @@ void *threadFunc(void *input){
             flag = 1;
         }
     }
-    printf("  Client Message: Ma%s\n",final_client_result);
+    printf("Client Message: %s\n",final_client_result);
 
     sleep(20);
     char* server_msg = "Server is done with you";

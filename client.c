@@ -48,13 +48,11 @@ int main(int argc, char const *argv[])
     sprintf(top_x,"%d",x);
     send(sock , top_x , strlen(top_x) , 0 );
     
-    // char* top_data[x][4];//Top data will store the received the top n processes data
+    // Receiving top processes calculated by server
 
+    printf("Top processes returned by server- \n");
     int flag = 0;
     char* msg_received = "received";
-    char max_pid[10] = {0};
-    char max_proc_name[100] = {0};
-    int max_cpu_usage = -1;
 
     FILE *filePointer;
     char filename[20] = "client_";
@@ -65,43 +63,73 @@ int main(int argc, char const *argv[])
         char single_data_row[100] = {0}; //Will hold the data that needs to be processed back to the client
         int valread2 = read(sock, single_data_row, 100);
         if(valread2>0){
-            // printf("%s\n",single_data_row);
+            printf("%s\n",single_data_row);
             fprintf(filePointer,"%s\n",single_data_row);
-            //process the received row and store it in top_data
-            char * token = strtok(single_data_row," ");
-            // printf("%s \n",token);
-            int j = 0;
-            int cur_proc_sum = 0;
-            char cur_proc_name[100] = {0};
-            char cur_proc_pid[10] = {0};
-            while(token != NULL && j<4){
-                if(j==0){
-                    strcpy(cur_proc_pid,token);
-                }
-                else if(j==1){
-                    strcpy(cur_proc_name,token);
-                }
-                else if(j==2 || j==3){
-                    cur_proc_sum += atoi(token);
-                }
-                token = strtok(NULL," ");
-                j+=1;
-            }
-            //If cur_proc_sum greater than max_cpu_usage, reallocate them these new values
-            if(cur_proc_sum>max_cpu_usage){
-                max_cpu_usage = cur_proc_sum;
-                strcpy(max_proc_name,cur_proc_name);
-                strcpy(max_pid,cur_proc_pid);
-            }
             flag += 1;
             send(sock,msg_received,strlen(msg_received),0);
         }
     }
     fclose(filePointer);
 
-    printf("Max CPU Usage Process found- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
+    // Following code to find top most process, server side
+    char max_pid[10] = {0};
+    char max_proc_name[100] = {0};
+    int max_cpu_usage = -1;
+    // dirent.h functions to check what all folders belong to /proc/  
+    struct dirent *de; // Pointer for directory entry
+	DIR *dr = opendir("/proc");
+	if (dr == NULL) {
+		printf("Could not open current directory");
+		return 0;
+	}
+    int pid_array[1000]; //Array to hold current open processes' PID
+    int sz = 0;
+	while ((de = readdir(dr)) != NULL){
+		// printf("%s\n", de->d_name);
+        if(de->d_name[0]!='\0' && de->d_name[0]>=49 && de->d_name[0]<=57){ //Thus only considering numerical values, hence getting the pid values
+            pid_array[sz++] = atoi(de->d_name);
+        }
+    }
+	closedir(dr);
+
+    int n = sz; // n denotes the number of CPU processes to be returned
+    for(int i=0;i<n;i++){
+        int fd, sz;
+        char *c = (char *) calloc(2000, sizeof(char));
+        char file_name[100] = "/proc/";
+        char pid_string[10];
+        sprintf(pid_string,"%d",pid_array[i]);
+        strcat(file_name,pid_string);
+        strcat(file_name,"/stat");
+        fd = open(file_name, O_RDONLY);
+        if (fd < 0) { perror("r1"); continue; } //Tthis gets triggered, especially when processes get killed during the process, very rare though
+        sz = read(fd, c, 2000);
+        c[sz] = '\0';
+        // c now holds proc/<pid>/stat file, from which we need to extract the data that we need 
+        char * token = strtok(c," ");
+        char * broken_c[52];
+        int j = 0;
+        while(token != NULL){
+            broken_c[j++] = token;
+            token = strtok(NULL," ");
+        }
+        char cur_pid[10] = {0}; strcpy(cur_pid,broken_c[0]);
+        char cur_proc_name[100] = {0}; strcpy(cur_proc_name,broken_c[1]);
+        char cur_cpu_user[10] = {0}; strcpy(cur_cpu_user,broken_c[13]);
+        char cur_cpu_kernel[10] = {0}; strcpy(cur_cpu_kernel,broken_c[14]);
+        int cur_cpu_user_val = atoi(cur_cpu_user);
+        int cur_cpu_kernel_val = atoi(cur_cpu_kernel);
+        if(cur_cpu_kernel_val+cur_cpu_user_val>max_cpu_usage){
+            max_cpu_usage = cur_cpu_kernel_val+cur_cpu_user_val;
+            strcpy(max_pid,cur_pid);
+            strcpy(max_proc_name,cur_proc_name);
+        }
+    }
+
+    //Sending topmost process found here to server
+    printf("Max CPU Usage Process found client side- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
     char final_client_result[200];
-    sprintf(final_client_result, "Max CPU Usage Process found- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
+    sprintf(final_client_result, "Max CPU Usage Process found by client- %s %s %d\n",max_pid,max_proc_name,max_cpu_usage);
     send(sock,final_client_result,strlen(final_client_result),0);
     flag = 0;
     int valread3;
